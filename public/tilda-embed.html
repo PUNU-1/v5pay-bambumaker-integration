@@ -1,9 +1,7 @@
 <!--
   Вставить этот код в блок Тильды "T123 — HTML код" (Zero Block) на странице
-  оформления заказа / корзины. Перед вставкой:
-    1. Замените "https://ВАШ-СЕРВЕР.example.com" на реальный адрес вашего
-       развёрнутого сервера (см. README.md).
-    2. Замените заглушку orderData на реальные данные из корзины/формы Тильды.
+  оформления заказа / корзины. Перед вставкой замените заглушку orderData
+  на реальные данные из корзины/формы Тильды.
 -->
 <button id="v5pay-checkout-btn" style="padding:14px 28px;font-size:16px;cursor:pointer;background:#111;color:#fff;border:none;border-radius:6px;">
   Оплатить картой
@@ -31,7 +29,7 @@ document.getElementById('v5pay-checkout-btn').addEventListener('click', async fu
       productQty: 1
     };
 
-    var resp = await fetch('https://ВАШ-СЕРВЕР.example.com/v5pay/create-payment', {
+    var resp = await fetch('https://v5pay-bambumaker-integration.onrender.com/v5pay/create-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderData)

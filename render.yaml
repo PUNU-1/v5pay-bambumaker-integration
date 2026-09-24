@@ -2,7 +2,7 @@
 # Секреты (sync: false) вводятся в дашборде Render, в git не попадают.
 services:
   - type: web
-    name: v5pay-bambumaker
+    name: v5pay-bambumaker-integration
     runtime: node
     plan: free
     region: frankfurt
