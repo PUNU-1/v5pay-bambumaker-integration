@@ -18,11 +18,26 @@
 
   Важно: в настройках формы корзины НЕ задавать «Ссылку на страницу после
   успешной отправки» — Тильда уйдёт на неё раньше, чем откроется оплата.
+
+  Тестовый режим (TEST_ONLY = true): пока V5Pay работает с тестовыми
+  ключами, оплата включается только в браузере, где открыли
+  https://bambumaker.com/?v5pay_test=1 (выключить: ?v5pay_test=0).
+  Обычные покупатели оформляют заказ как раньше, без оплаты.
+  Для боевого запуска поставить TEST_ONLY = false.
 -->
 <script>
 (function () {
   var SERVER = 'https://v5pay-bambumaker-integration.onrender.com';
   var RETURN_URL = 'https://bambumaker.com/?v5pay=return';
+  var TEST_ONLY = true;
+
+  if (TEST_ONLY) {
+    try {
+      if (/[?&]v5pay_test=1/.test(window.location.search)) localStorage.setItem('v5pay_test', '1');
+      if (/[?&]v5pay_test=0/.test(window.location.search)) localStorage.removeItem('v5pay_test');
+      if (localStorage.getItem('v5pay_test') !== '1') return;
+    } catch (e) { return; }
+  }
 
   // Бесплатный тариф Render засыпает после 15 минут без запросов и потом
   // просыпается 30–60 секунд. Будим сервер заранее, пока покупатель
