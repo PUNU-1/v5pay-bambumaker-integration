@@ -70,7 +70,11 @@ app.post('/v5pay/create-payment', async (req, res) => {
       redirectUrl,
     } = req.body || {};
 
-    if (!orderNo || !amount) {
+    // V5Pay принимает orderNo только из латинских букв и цифр, а номер заказа
+    // Тильды выглядит как T202609-1842620832 — убираем всё остальное.
+    const v5OrderNo = String(orderNo || '').replace(/[^A-Za-z0-9]/g, '');
+
+    if (!v5OrderNo || !amount) {
       return res.status(400).json({ error: 'orderNo и amount обязательны' });
     }
     if (!(Number(amount) > 0)) {
@@ -100,7 +104,7 @@ app.post('/v5pay/create-payment', async (req, res) => {
       appKey: V5PAY_APP_KEY,
       sysCountryCode: 'RU',
       currency: V5PAY_CURRENCY,
-      orderNo: String(orderNo),
+      orderNo: v5OrderNo,
       amount: Number(amount).toFixed(2),
       email: email || undefined,
       mobile: mobile || undefined,

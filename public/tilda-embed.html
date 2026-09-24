@@ -60,8 +60,8 @@
       return input ? String(input.value || '').trim() : '';
     };
     var products = (cart.products || []).filter(function (p) { return p && !p.deleted; });
-    // V5Pay принимает orderNo только из латинских букв и цифр — номер заказа
-    // Тильды (только цифры) подходит.
+    // Номер заказа Тильды (вида T202609-1842620832). Дефис сервер уберёт сам:
+    // V5Pay принимает orderNo только из латинских букв и цифр.
     var orderNo = form.tildaOrderId && form.tildaOrderId !== '0' ? String(form.tildaOrderId) : 'BM' + Date.now();
     var lines = products.map(function (p) { return p.name + (p.quantity > 1 ? ' x' + p.quantity : ''); });
     var summary = lines.length === 1 ? lines[0] : 'Заказ ' + orderNo + ': ' + lines.join(', ');
