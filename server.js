@@ -14,6 +14,9 @@ const {
   V5PAY_APP_KEY,
   V5PAY_SECRET_KEY,
   PUBLIC_CALLBACK_URL,
+  // TODO(!): подтвердить у V5Pay код валюты для российского кэшира. Цены на
+  // сайте в рублях, поэтому по умолчанию RUB — см. README "Открытые вопросы".
+  V5PAY_CURRENCY = 'RUB',
   PORT = 3000,
   ALLOWED_ORIGINS = 'https://bambumaker.com,https://www.bambumaker.com',
 } = process.env;
@@ -70,6 +73,9 @@ app.post('/v5pay/create-payment', async (req, res) => {
     if (!orderNo || !amount) {
       return res.status(400).json({ error: 'orderNo и amount обязательны' });
     }
+    if (!(Number(amount) > 0)) {
+      return res.status(400).json({ error: 'amount должен быть положительным числом' });
+    }
 
     // Для России V5Pay требует доп. параметр orderExtendParam —
     // JSON-описание товара и покупателя (см. orderExtendParam.md в доке V5Pay).
@@ -93,17 +99,14 @@ app.post('/v5pay/create-payment', async (req, res) => {
       merchantNo: V5PAY_MERCHANT_NO,
       appKey: V5PAY_APP_KEY,
       sysCountryCode: 'RU',
-      // TODO(!): подтвердить у V5Pay точный код валюты для российского кэшира
-      // (RUB или расчёт в USD с конвертацией на их стороне) — сейчас USD как
-      // безопасное значение по умолчанию, см. README "Открытые вопросы".
-      currency: 'USD',
+      currency: V5PAY_CURRENCY,
       orderNo: String(orderNo),
       amount: Number(amount).toFixed(2),
       email: email || undefined,
       mobile: mobile || undefined,
       tradeSummary: productName || 'Order',
       callbackUrl: PUBLIC_CALLBACK_URL,
-      redirectUrl: redirectUrl || 'https://bambumaker.com/thank-you',
+      redirectUrl: redirectUrl || 'https://bambumaker.com/?v5pay=return',
       language: 'ru-RU',
       orderExtendParam,
     };
@@ -123,6 +126,7 @@ app.post('/v5pay/create-payment', async (req, res) => {
       return res.status(502).json({ error: 'V5Pay вернул ошибку', details: data });
     }
 
+    console.log(`Создан платёж для заказа ${params.orderNo} на ${params.amount} ${params.currency}`);
     return res.json({ checkoutUrl: data.checkoutUrl, expiresAt: data.expiresAt });
   } catch (err) {
     console.error('create-payment exception:', err);

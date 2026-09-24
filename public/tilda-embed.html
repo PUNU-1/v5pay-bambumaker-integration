@@ -1,54 +1,142 @@
 <!--
-  Вставить этот код в блок Тильды "T123 — HTML код" (Zero Block) на странице
-  оформления заказа / корзины. Перед вставкой замените заглушку orderData
-  на реальные данные из корзины/формы Тильды.
+  Оплата заказа из корзины Тильды через V5Pay (bambumaker.com).
+
+  Куда вставить: Тильда → Настройки сайта → Ещё → «HTML-код для вставки
+  внутрь HEAD» → Сохранить → Опубликовать все страницы. Вставка одна на весь
+  сайт: корзина есть на каждой странице.
+
+  Как работает:
+    1. Покупатель оформляет заказ в обычной корзине Тильды. Заявка уходит
+       менеджеру как раньше (почта / CRM Тильды).
+    2. Сразу после успешной отправки скрипт берёт из корзины итоговую сумму
+       (с доставкой и скидками) и товары, просит наш сервер создать платёж
+       в V5Pay и перенаправляет покупателя на страницу оплаты. Номер платежа
+       в V5Pay = номер заказа в Тильде.
+    3. После оплаты V5Pay возвращает покупателя на сайт (?v5pay=return),
+       скрипт показывает сообщение. Факт оплаты подтверждает только callback
+       на сервере, а не возврат покупателя.
+
+  Важно: в настройках формы корзины НЕ задавать «Ссылку на страницу после
+  успешной отправки» — Тильда уйдёт на неё раньше, чем откроется оплата.
 -->
-<button id="v5pay-checkout-btn" style="padding:14px 28px;font-size:16px;cursor:pointer;background:#111;color:#fff;border:none;border-radius:6px;">
-  Оплатить картой
-</button>
-
 <script>
-document.getElementById('v5pay-checkout-btn').addEventListener('click', async function () {
-  var btn = this;
-  btn.disabled = true;
-  var originalText = btn.textContent;
-  btn.textContent = 'Обработка...';
+(function () {
+  var SERVER = 'https://v5pay-bambumaker-integration.onrender.com';
+  var RETURN_URL = 'https://bambumaker.com/?v5pay=return';
 
-  try {
-    // TODO: заменить на реальные данные заказа. Их нужно брать либо из
-    // корзины Тильды (window.tcart / события Тильды), либо из формы,
-    // которую заполняет покупатель перед оплатой.
-    var orderData = {
-      // V5Pay принимает orderNo только из латинских букв и цифр — без "-" и "_".
-      orderNo: 'BM' + Date.now(),
-      amount: '19999.00',
-      email: 'customer@example.com',
-      productName: 'Bambu Lab A1 mini',
-      productSku: 'A1-MINI',
-      productPrice: '19999.00',
-      productQty: 1
+  // Бесплатный тариф Render засыпает после 15 минут без запросов и потом
+  // просыпается 30–60 секунд. Будим сервер заранее, пока покупатель
+  // выбирает товар и заполняет форму.
+  try { fetch(SERVER + '/health', { mode: 'no-cors' }); } catch (e) {}
+
+  // Тильда шлёт это событие на форму сразу после успешной отправки заказа —
+  // до того, как очистит корзину и поля формы.
+  document.addEventListener('tildaform:aftersuccess', function (e) {
+    var form = e.target;
+    if (!form || !form.getAttribute || form.getAttribute('data-formcart') !== 'y') return;
+    var cart = window.tcart;
+    if (!cart || !(cart.amount > 0)) return;
+    pay(collectOrder(form, cart), 0);
+  });
+
+  function collectOrder(form, cart) {
+    var val = function (name) {
+      var input = form.querySelector('[name="' + name + '"]');
+      return input ? String(input.value || '').trim() : '';
     };
+    var products = (cart.products || []).filter(function (p) { return p && !p.deleted; });
+    // V5Pay принимает orderNo только из латинских букв и цифр — номер заказа
+    // Тильды (только цифры) подходит.
+    var orderNo = form.tildaOrderId && form.tildaOrderId !== '0' ? String(form.tildaOrderId) : 'BM' + Date.now();
+    var lines = products.map(function (p) { return p.name + (p.quantity > 1 ? ' x' + p.quantity : ''); });
+    var summary = lines.length === 1 ? lines[0] : 'Заказ ' + orderNo + ': ' + lines.join(', ');
+    var phone = val('Phone').replace(/[^\d+]/g, '');
+    var email = val('Email');
 
-    var resp = await fetch('https://v5pay-bambumaker-integration.onrender.com/v5pay/create-payment', {
+    return {
+      orderNo: orderNo,
+      amount: String(cart.amount),
+      email: email,
+      mobile: phone,
+      // В заказе может быть несколько товаров, а V5Pay ждёт один — передаём
+      // заказ целиком: состав в названии/описании, цена = итог, количество 1.
+      productName: summary.slice(0, 100),
+      productSku: products.length === 1 && products[0].sku ? products[0].sku : orderNo,
+      productPrice: String(cart.amount),
+      productQty: 1,
+      productDescription: lines.join('; ').slice(0, 500),
+      customerId: email || phone || orderNo,
+      customerNickname: val('Name') || 'Customer',
+      redirectUrl: RETURN_URL + '&order=' + encodeURIComponent(orderNo)
+    };
+  }
+
+  function pay(order, attempt) {
+    showMessage('Заказ №' + order.orderNo + ' принят', 'Открываем страницу оплаты… Это может занять до минуты.');
+    // Повторная попытка — с новым номером платежа: первый мог успеть
+    // создаться в V5Pay, а дубли номеров платёжка не принимает.
+    var body = attempt ? Object.assign({}, order, { orderNo: order.orderNo + 'R' + attempt }) : order;
+
+    fetch(SERVER + '/v5pay/create-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderData)
-    });
-
-    var data = await resp.json();
-
-    if (data.checkoutUrl) {
-      window.location.href = data.checkoutUrl;
-    } else {
-      alert('Не удалось создать платёж, попробуйте ещё раз.');
-      btn.disabled = false;
-      btn.textContent = originalText;
-    }
-  } catch (e) {
-    console.error(e);
-    alert('Ошибка соединения, попробуйте ещё раз.');
-    btn.disabled = false;
-    btn.textContent = originalText;
+      body: JSON.stringify(body)
+    })
+      .then(function (resp) { return resp.json(); })
+      .then(function (data) {
+        if (!data.checkoutUrl) throw new Error(data.error || 'нет checkoutUrl');
+        window.location.href = data.checkoutUrl;
+      })
+      .catch(function (err) {
+        console.error('V5Pay:', err);
+        showMessage(
+          'Заказ №' + order.orderNo + ' принят',
+          'Не удалось открыть страницу оплаты. Попробуйте ещё раз — или менеджер свяжется с вами для оплаты.',
+          [['Попробовать ещё раз', function () { pay(order, attempt + 1); }], ['Закрыть', hideMessage]]
+        );
+      });
   }
-});
+
+  function showReturnMessage() {
+    var match = /[?&]v5pay=return(?:&order=([^&#]*))?/.exec(window.location.search);
+    if (!match) return;
+    var order = match[1] ? ' №' + decodeURIComponent(match[1]) : '';
+    showMessage('Спасибо!', 'Как только платёжная система подтвердит оплату заказа' + order + ', менеджер свяжется с вами.', [['Хорошо', hideMessage]]);
+    try { window.history.replaceState(null, '', window.location.pathname); } catch (e) {}
+  }
+
+  var overlay;
+  function showMessage(title, text, buttons) {
+    if (!overlay) {
+      overlay = element('div', 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;');
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '';
+    var card = element('div', 'background:#fff;color:#111;max-width:420px;width:100%;box-sizing:border-box;border-radius:8px;padding:24px;text-align:center;font-family:inherit;font-size:16px;line-height:1.4;');
+    card.appendChild(element('div', 'font-weight:600;font-size:18px;margin-bottom:8px;', title));
+    card.appendChild(element('div', 'color:#555;font-size:15px;', text));
+    (buttons || []).forEach(function (b, i) {
+      var btn = element('button', 'margin:16px 6px 0;padding:12px 20px;border:0;border-radius:4px;cursor:pointer;font-size:15px;' + (i ? 'background:#eee;color:#111;' : 'background:#00ae42;color:#fff;'), b[0]);
+      btn.type = 'button';
+      btn.onclick = b[1];
+      card.appendChild(btn);
+    });
+    overlay.appendChild(card);
+    overlay.style.display = 'flex';
+  }
+
+  function hideMessage() {
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function element(tag, css, text) {
+    var node = document.createElement(tag);
+    node.style.cssText = css;
+    if (text) node.textContent = text;
+    return node;
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showReturnMessage);
+  else showReturnMessage();
+})();
 </script>
