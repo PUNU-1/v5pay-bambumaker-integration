@@ -1,0 +1,26 @@
+# Render Blueprint: New -> Blueprint -> выбрать этот репозиторий.
+# Секреты (sync: false) вводятся в дашборде Render, в git не попадают.
+services:
+  - type: web
+    name: v5pay-bambumaker
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: V5PAY_BASE_URL
+        value: https://api-uat.v5pay.com
+      - key: V5PAY_MERCHANT_NO
+        sync: false
+      - key: V5PAY_APP_KEY
+        sync: false
+      - key: V5PAY_SECRET_KEY
+        sync: false
+      - key: PUBLIC_CALLBACK_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://bambumaker.com,https://www.bambumaker.com
+      - key: PORT
+        value: "10000"

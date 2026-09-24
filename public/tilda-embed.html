@@ -1,0 +1,56 @@
+<!--
+  Вставить этот код в блок Тильды "T123 — HTML код" (Zero Block) на странице
+  оформления заказа / корзины. Перед вставкой:
+    1. Замените "https://ВАШ-СЕРВЕР.example.com" на реальный адрес вашего
+       развёрнутого сервера (см. README.md).
+    2. Замените заглушку orderData на реальные данные из корзины/формы Тильды.
+-->
+<button id="v5pay-checkout-btn" style="padding:14px 28px;font-size:16px;cursor:pointer;background:#111;color:#fff;border:none;border-radius:6px;">
+  Оплатить картой
+</button>
+
+<script>
+document.getElementById('v5pay-checkout-btn').addEventListener('click', async function () {
+  var btn = this;
+  btn.disabled = true;
+  var originalText = btn.textContent;
+  btn.textContent = 'Обработка...';
+
+  try {
+    // TODO: заменить на реальные данные заказа. Их нужно брать либо из
+    // корзины Тильды (window.tcart / события Тильды), либо из формы,
+    // которую заполняет покупатель перед оплатой.
+    var orderData = {
+      // V5Pay принимает orderNo только из латинских букв и цифр — без "-" и "_".
+      orderNo: 'BM' + Date.now(),
+      amount: '19999.00',
+      email: 'customer@example.com',
+      productName: 'Bambu Lab A1 mini',
+      productSku: 'A1-MINI',
+      productPrice: '19999.00',
+      productQty: 1
+    };
+
+    var resp = await fetch('https://ВАШ-СЕРВЕР.example.com/v5pay/create-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData)
+    });
+
+    var data = await resp.json();
+
+    if (data.checkoutUrl) {
+      window.location.href = data.checkoutUrl;
+    } else {
+      alert('Не удалось создать платёж, попробуйте ещё раз.');
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Ошибка соединения, попробуйте ещё раз.');
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+</script>
