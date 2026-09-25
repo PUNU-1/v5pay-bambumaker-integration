@@ -143,6 +143,17 @@ app.post('/v5pay/create-payment', async (req, res) => {
 //    должен быть прописан в кабинете V5Pay (Status Notification
 //    Address) или передан как callbackUrl при создании платежа.
 // ------------------------------------------------------------------
+// Коды статуса платежа — "Payin order status" в приложении к документации V5Pay.
+const PAYIN_STATUS = {
+  0: 'ожидает оплаты',
+  1: 'в обработке',
+  2: 'успешно',
+  3: 'ошибка',
+  4: 'возврат в обработке',
+  5: 'возврат выполнен',
+  6: 'возврат не удался',
+};
+
 app.post('/v5pay/callback', (req, res) => {
   const body = req.body || {};
 
@@ -163,7 +174,7 @@ app.post('/v5pay/callback', (req, res) => {
 
   if (!isProcessed(transactionId)) {
     markProcessed(transactionId, { orderNo, status, amount, currency });
-    console.log(`Заказ ${orderNo} (transactionId=${transactionId}) — статус: ${status}`);
+    console.log(`Заказ ${orderNo} (transactionId=${transactionId}) — статус: ${status} (${PAYIN_STATUS[status] || 'неизвестный'}), ${amount} ${currency}`);
 
     // TODO: здесь добавить реальную бизнес-логику после успешной оплаты,
     // например:
