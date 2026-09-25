@@ -94,8 +94,9 @@ ufw allow OpenSSH >/dev/null
 ufw allow 'Nginx Full' >/dev/null
 ufw --force enable >/dev/null
 
-# Сертификат Let's Encrypt. Нужна DNS-запись $DOMAIN -> IP этого сервера.
-if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+# Сертификат Let's Encrypt (--agree-tos = согласие с их условиями; SKIP_CERT=1 —
+# пропустить). Нужна DNS-запись $DOMAIN -> IP этого сервера.
+if [ "${SKIP_CERT:-}" != 1 ] && [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
   if ! certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect; then
     echo "!! Сертификат не выпущен. Проверьте DNS-запись $DOMAIN -> IP сервера и запустите скрипт ещё раз."
   fi
