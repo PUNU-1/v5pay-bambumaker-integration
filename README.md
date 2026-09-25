@@ -69,8 +69,10 @@ npm start
   `PUBLIC_CALLBACK_URL`.
 - **Railway.app** — аналогично, тоже просто и с бесплатным лимитом.
 - **Обычный VPS** — для боевого режима: V5Pay требует постоянный IP сервера,
-  а у Render он общий. Сейчас тест работает на Render
-  (`https://v5pay-bambumaker-integration.onrender.com`), бой — на VPS.
+  а у Render он общий. Рабочий сервер — VPS в Рег.облаке:
+  `https://pay.bambumaker.com` (IP `194.67.113.151`, его и указывать V5Pay).
+  Render (`https://v5pay-bambumaker-integration.onrender.com`) — прежняя
+  тестовая копия, после переезда его можно удалить.
 
 ### Переезд на VPS (Ubuntu 24.04)
 
