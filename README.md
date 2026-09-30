@@ -94,6 +94,7 @@ npm start
    код заново вставить в Тильду.
 
 Логи на VPS: `journalctl -u v5pay -f`.
+Боевое переключение по шагам: [deploy/PRODUCTION.md](deploy/PRODUCTION.md).
 
 ## Тестирование
 
