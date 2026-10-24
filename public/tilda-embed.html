@@ -19,17 +19,16 @@
   Важно: в настройках формы корзины НЕ задавать «Ссылку на страницу после
   успешной отправки» — Тильда уйдёт на неё раньше, чем откроется оплата.
 
-  Тестовый режим (TEST_ONLY = true): пока V5Pay работает с тестовыми
-  ключами, оплата включается только в браузере, где открыли
-  https://bambumaker.com/?v5pay_test=1 (выключить: ?v5pay_test=0).
-  Обычные покупатели оформляют заказ как раньше, без оплаты.
-  Для боевого запуска поставить TEST_ONLY = false.
+  Боевой режим (TEST_ONLY = false): оплата включена у всех покупателей.
+  Тестовый режим (TEST_ONLY = true) включает оплату только в браузере, где
+  открыли https://bambumaker.com/?v5pay_test=1 (выключить: ?v5pay_test=0),
+  обычные покупатели оформляют заказ без оплаты.
 -->
 <script>
 (function () {
   var SERVER = 'https://pay.bambumaker.com';
   var RETURN_URL = 'https://bambumaker.com/?v5pay=return';
-  var TEST_ONLY = true;
+  var TEST_ONLY = false;
 
   if (TEST_ONLY) {
     try {
